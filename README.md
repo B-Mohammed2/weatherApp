@@ -1,4 +1,4 @@
 # weatherApp
 API project
 
-thanks to [Amcharts](https://www.amcharts.com/) website for the animated icons
+the icons were imported from [flatIcon](https://www.flaticon.com).
