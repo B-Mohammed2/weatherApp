@@ -1,6 +1,10 @@
+// Import the luxon library
+const { DateTime } = luxon;
+
 //state
 let city="oslo";
 let units="metric";
+let currentCityTimezone = null;
 
 
 // Define a mapping between weather conditions and icon filenames
@@ -27,9 +31,8 @@ let humidity=document.querySelector(".humidity");
 let wind=document.querySelector(".wind");
 let pressure=document.querySelector(".pressure");
 
-//search city
 
-// }
+//search city
 document.querySelector(".citySearch").addEventListener('submit',e=>{
     let search=document.querySelector(".citySearch input");
     e.preventDefault();
@@ -45,6 +48,53 @@ function convertContryCode(country){
     return reagionName.of(country);
 }
 
+// Create a function to map time zone offset to IANA time zone identifier
+function mapTimeZoneOffsetToIANA(offsetInSeconds) {
+    const offsetHours = offsetInSeconds / 3600;
+    const offsetString = offsetHours > 0 ? `+${offsetHours}` : offsetHours.toString();
+    return `Etc/GMT${offsetString}`;
+}
+
+
+
+// update time
+// function updateDateTime() {
+//     const dateTimeElement = document.querySelector(".dateTime");
+//     const now = new Date();
+//     const options = {
+//         weekday: "short",
+//         day: "numeric",
+//         month: "short",
+//         year: "numeric",
+//         hour: "numeric",
+//         minute: "numeric",
+//         second: "numeric",
+//         timeZone: currentCityTimezone ,
+//         hour12: true,
+//     };
+//     dateTimeElement.innerHTML = now.toLocaleString(["en-US"], options);
+    
+// }
+
+// update time
+// function updateDateTime() {
+//     const dateTimeElement = document.querySelector(".dateTime");
+//     const now = DateTime.now().setZone(mapTimeZoneOffsetToIANA(currentCityTimezone));
+//     const formattedDate = now.toFormat('ccc, d MMM yyyy, hh:mm:ss a');
+//     dateTimeElement.innerHTML = formattedDate;
+// }
+
+function updateDateTime() {
+    const dateTimeElement = document.querySelector(".dateTime");
+    const now = DateTime.now().setZone(mapTimeZoneOffsetToIANA(currentCityTimezone));
+    const formattedDate = now.toLocaleString(DateTime.DATETIME_FULL);
+    dateTimeElement.innerHTML = formattedDate;
+}
+
+
+// Call updateDateTime every second (1000 milliseconds)
+setInterval(updateDateTime, 1000);
+
 // convrting time and zone
 function convertTimeStamp(timestamp, timezoneOffset) {
     const date = new Date((timestamp + timezoneOffset) * 1000);
@@ -56,39 +106,22 @@ function convertTimeStamp(timestamp, timezoneOffset) {
         hour: "numeric",
         minute: "numeric",
         second: "numeric",
-        timeZone: 'UTC',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         hour12: true,
     };
-    return date.toLocaleString("en-US", options);
+    console.log(date.toLocaleString([], options));
+    // return date.toLocaleString("en-US", options);
+    return date.toLocaleString([], options);
+    
 }
-
-// update time
-function updateDateTime() {
-    const dateTimeElement = document.querySelector(".dateTime");
-    const now = new Date();
-    const options = {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        second: "numeric",
-        timeZone: 'UTC',
-        hour12: true,
-    };
-    dateTimeElement.innerHTML = now.toLocaleString("en-US", options);
-}
-
-// Call updateDateTime every second (1000 milliseconds)
-setInterval(updateDateTime, 1000);
-
 
 function getWeather() {
-    const apiKey = '7a435a3f4f51861142ce2843c4774aaa';
+    var apiKey = '7a435a3f4f51861142ce2843c4774aaa';
     fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${units}`)
         .then(res => res.json())
         .then(data => {
+            currentCityTimezone = data.timezone;
+            console.log(data.timezone);
             weatherCity.innerHTML = `${data.name},${convertContryCode(data.sys.country)}`;
             dateTime.innerHTML = convertTimeStamp(data.dt, data.timezone);
             weatherForcast.innerHTML = `<p>${data.weather[0].main}</p>`;
