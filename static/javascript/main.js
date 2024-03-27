@@ -1,59 +1,7 @@
-// Import the luxon library
+
 
 //state
 let city="null";
-// Function to get the current location of the user
-function getCurrentLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
-    } else {
-        console.error("Geolocation is not supported by this browser.");
-    }
-}
-
-// Success callback function for getCurrentPosition
-function successCallback(position) {
-    const latitude = position.coords.latitude;
-    const longitude = position.coords.longitude;
-
-    // Use latitude and longitude to fetch city name using reverse geocoding
-    getCityName(latitude, longitude);
-}
-
-// Error callback function for getCurrentPosition
-function errorCallback(error) {
-    console.error("Error getting current location:", error);
-    // If getting current location fails, fallback to default city (Oslo)
-    getWeather(city || "oslo"); // Fetch weather data for either current location or Oslo
-}
-
-// Function to fetch city name using reverse geocoding
-function getCityName(latitude, longitude) {
-    // Use a reverse geocoding API to get the city name based on latitude and longitude
-    // This part of the code will depend on the specific reverse geocoding service you use
-    // You need to replace 'YOUR_REVERSE_GEOCODING_API_KEY' with your actual API key
-    // And adjust the API endpoint and response parsing accordingly
-    const apiKey = 'YOUR_REVERSE_GEOCODING_API_KEY';
-    fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.results && data.results.length > 0) {
-                const cityName = data.results[0].address_components[2].long_name; // Assuming the city name is in the third address component
-                getWeather(cityName); // Fetch weather data for the obtained city
-            } else {
-                console.error("No city found for the provided latitude and longitude.");
-                getWeather(city || "oslo"); // Fetch weather data for either current location or Oslo
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching city name:", error);
-            getWeather(city || "oslo"); // Fetch weather data for either current location or Oslo
-        });
-}
-
-// Call getCurrentLocation to get the current location of the user
-getCurrentLocation();
-
 
 // temperature
 
@@ -85,7 +33,6 @@ document.querySelector(".unitFarenheit").addEventListener('click', function() {
 });
 
 
-
 // Define a mapping between weather conditions and icon filenames
 const weatherImg = {
     "Clear": "clear.png",
@@ -112,13 +59,11 @@ let pressure=document.querySelector(".pressure");
 
 
 //search city
-document.querySelector(".citySearch").addEventListener('submit',e=>{
-    let search=document.querySelector(".citySearch input");
+document.querySelector(".citySearch").addEventListener('submit', e => {
     e.preventDefault();
-    city=search.value;
-    getWeather();
-    console.log(search.value);
-
+    let search = document.querySelector(".citySearch input").value;
+    city = search; // Update the global city variable
+    getWeather(city); // Pass the city value to getWeather function
 });
 
 // converting country code
@@ -130,20 +75,21 @@ function convertContryCode(country){
 // Create a function to map time zone offset to IANA time zone identifier
 function mapTimeZoneOffsetToIANA(offsetInSeconds) {
     const offsetHours = offsetInSeconds / 3600;
-    const offsetString = offsetHours > 0 ? `+${offsetHours}` : offsetHours.toString();
+    // const offsetString = offsetHours > 0 ? `-${offsetHours}` : offsetHours.toString();
+    const offsetString = offsetHours !== 0 ? (offsetHours > 0 ? `-${offsetHours}` : `+${Math.abs(offsetHours)}`) : '0';
+
     return `Etc/GMT${offsetString}`;
 }
-
-
 
 
 // update time
 
 function updateDateTime() {
     const dateTimeElement = document.querySelector(".dateTime");
-    const now = DateTime.now().setZone(mapTimeZoneOffsetToIANA(currentCityTimezone));
+    const now = luxon.DateTime.now().setZone(mapTimeZoneOffsetToIANA(currentCityTimezone));
     const formattedDate = now.toFormat('ccc, d MMM yyyy, hh:mm:ss a');
     dateTimeElement.innerHTML = formattedDate;
+    console.log('currentCityTimezone' + currentCityTimezone);
 }
 
 
@@ -168,40 +114,79 @@ function convertTimeStamp(timestamp, timezoneOffset) {
     console.log(date.toLocaleString([], options));
     // return date.toLocaleString("en-US", options);
     return date.toLocaleString([], options);
-    
 }
 
-function getWeather() {
+function getWeather(city = null) {
     var apiKey = '7a435a3f4f51861142ce2843c4774aaa';
-    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${units}`)
-        .then(res => res.json())
-        .then(data => {
-            currentCityTimezone = data.timezone;
-            console.log(data.timezone);
-            weatherCity.innerHTML = `${data.name},${convertContryCode(data.sys.country)}`;
-            dateTime.innerHTML = convertTimeStamp(data.dt, data.timezone);
-            weatherForcast.innerHTML = `<p>${data.weather[0].main}</p>`;
-            weathTemp.innerHTML = `${Math.round(data.main.temp)}&#176${units === "metric" ? "C" : "F"}`;
-            // creating variables to find the image acordind to weather forcast.
-            let weatherCondition = data.weather[0].main;
-            if (weatherImg.hasOwnProperty(weatherCondition)) {
-                let iconFilename = weatherImg[weatherCondition];
-                weatherIcon.src = `static/img/icons/${iconFilename}`;
-            } else {
-                weatherIcon.src = `/static/img/icons/clear.png`;
-            }
-            weatherIcon.innerHTML= `<img src=${weatherIcon.src} alt="weatherIcon">`;
+    var units = 'metric';
 
-            weatherMinMax.innerHTML=`<p>Min:${Math.round(data.main.temp_min)}&#176</p>
-            <p>Max:${Math.round(data.main.temp_max)}&#176</p>`;
-            feelsLike.innerHTML=`${Math.round(data.main.feels_like)}&#176${units === "metric" ? "C" : "F"}`;
-            humidity.innerHTML=`${Math.round(data.main.humidity)}%`;
-            wind.innerHTML=`${data.wind.speed} M/S`;
-            pressure.innerHTML=`${Math.round(data.main.pressure)} hpa`;
-
-            console.log(data);
+    if (city) {
+        // Fetch weather data by city
+        fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${units}`)
+            .then(res => res.json())
+            .then(data => {
+                displayWeatherData(data);
+            })
+            .catch(error => {
+                console.error('Error fetching weather data by city:', error);
+            });
+    } else {
+        // Get user's location
+        navigator.geolocation.getCurrentPosition(position => {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            
+            // Fetch weather data based on user's location
+            fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=${units}`)
+                .then(res => res.json())
+                .then(data => {
+                    displayWeatherData(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching weather data by location:', error);
+                });
         });
+    }
 }
 
+function displayWeatherData(data) {
 
-document.addEventListener('DOMContentLoaded', getWeather);
+    if (!data || !data.name || !data.sys || !data.sys.country || !data.main || !data.weather || !data.weather[0]) {
+        console.error('Invalid weather data:', data);
+        return;
+    }
+
+    currentCityTimezone = data.timezone;
+    console.log(data.timezone);
+    weatherCity.innerHTML = `${data.name},${convertContryCode(data.sys.country)}`;
+    dateTime.innerHTML = convertTimeStamp(data.dt, data.timezone);
+    weatherForcast.innerHTML = `<p>${data.weather[0].main}</p>`;
+    weathTemp.innerHTML = `${Math.round(data.main.temp)}&#176${units === "metric" ? "C" : "F"}`;
+    // creating variables to find the image acordind to weather forcast.
+    let weatherCondition = data.weather[0].main;
+    if (weatherImg.hasOwnProperty(weatherCondition)) {
+        let iconFilename = weatherImg[weatherCondition];
+        weatherIcon.src = `static/img/icons/${iconFilename}`;
+    } else {
+        weatherIcon.src = `/static/img/icons/clear.png`;
+    }
+    weatherIcon.innerHTML= `<img src=${weatherIcon.src} alt="weatherIcon">`;
+
+    weatherMinMax.innerHTML=`<p>Min:${Math.round(data.main.temp_min)}&#176</p>
+    <p>Max:${Math.round(data.main.temp_max)}&#176</p>`;
+    feelsLike.innerHTML=`${Math.round(data.main.feels_like)}&#176${units === "metric" ? "C" : "F"}`;
+    humidity.innerHTML=`${Math.round(data.main.humidity)}%`;
+    wind.innerHTML=`${data.wind.speed} M/S`;
+    pressure.innerHTML=`${Math.round(data.main.pressure)} hpa`;
+
+    console.log(data);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Fetch weather data by city name
+
+    // Fetch weather data based on user's geolocation
+    getWeather();
+});
+
+
