@@ -89,7 +89,6 @@ function updateDateTime() {
     const now = luxon.DateTime.now().setZone(mapTimeZoneOffsetToIANA(currentCityTimezone));
     const formattedDate = now.toFormat('ccc, d MMM yyyy, hh:mm:ss a');
     dateTimeElement.innerHTML = formattedDate;
-    console.log('currentCityTimezone' + currentCityTimezone);
 }
 
 
@@ -111,14 +110,13 @@ function convertTimeStamp(timestamp, timezoneOffset) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         hour12: true,
     };
-    console.log(date.toLocaleString([], options));
     // return date.toLocaleString("en-US", options);
     return date.toLocaleString([], options);
 }
 
 function getWeather(city = null) {
     var apiKey = '7a435a3f4f51861142ce2843c4774aaa';
-    var units = 'metric';
+    // var units = 'metric';
 
     if (city) {
         // Fetch weather data by city
@@ -157,7 +155,6 @@ function displayWeatherData(data) {
     }
 
     currentCityTimezone = data.timezone;
-    console.log(data.timezone);
     weatherCity.innerHTML = `${data.name},${convertContryCode(data.sys.country)}`;
     dateTime.innerHTML = convertTimeStamp(data.dt, data.timezone);
     weatherForcast.innerHTML = `<p>${data.weather[0].main}</p>`;
@@ -178,8 +175,6 @@ function displayWeatherData(data) {
     humidity.innerHTML=`${Math.round(data.main.humidity)}%`;
     wind.innerHTML=`${data.wind.speed} M/S`;
     pressure.innerHTML=`${Math.round(data.main.pressure)} hpa`;
-
-    console.log(data);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
